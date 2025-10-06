@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Viaje del Emprendedor 4.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        .boat-icon { 
+            font-size: 2.5rem; 
+            transition: transform 0.5s ease-out; /* Mantenemos la transición de movimiento base */
+            cursor: pointer;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            z-index: 5; /* Asegura que el barco esté sobre los marcadores */
+        }
+        .boat-icon:hover { transform: scale(1.1); }
+        .sea-bg {
+            background: linear-gradient(to top, #4fa3d1, #7ec0e5);
+            height: 150px;
+            border-top: 5px solid #0056b3;
+            border-bottom: 5px solid #0056b3;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5%;
+            position: relative; /* CRÍTICO: Necesario para posicionar los marcadores */
+            overflow: hidden; /* Evita que el barco se vea saliendo por abajo al hundirse */
+        }
+        /* Estilos de los Marcadores de Decisión */
+        .marker {
+            position: absolute;
+            top: -10px; /* Posiciona sobre la línea de flotación */
+            font-size: 1.5rem;
+            cursor: help; /* Indica interactividad (tooltip) */
+            transform: translateX(-50%); /* Centra el ícono sobre el punto */
+            transition: opacity 0.3s;
+            z-index: 2; /* Debajo del barco */
+        }
+        .marker:hover .marker-label {
+            opacity: 1;
+        }
+        .marker-label {
+            position: absolute;
+            bottom: 100%; /* Arriba del ícono */
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none; /* Permite hacer clic a través de él si no está visible */
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        /* Custom scrollbar for better aesthetics */
+        .log-container {
+            max-height: 250px;
+            overflow-y: auto;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+        }
+        .log-container::-webkit-scrollbar { width: 8px; }
+        .log-container::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 4px; }
+        .log-container::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col">
+
+    <header class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-blue-800">🚢 El Viaje del Emprendedor 4.0</h1>
+        <p class="text-gray-600 mt-2">Define tu mentalidad, planifica tu ruta y navega los desafíos de la Industria 4.0.</p>
+    </header>
+
+    <!-- Panel de Control y Estado -->
+    <div class="bg-white p-6 rounded-xl shadow-lg mb-6 border-t-4 border-blue-500">
+        <h2 class="text-xl font-semibold mb-4 text-blue-700">Estado de la Misión</h2>
+        <div class="grid grid-cols-3 gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Distancia Recorrida</p>
+                <p id="distance" class="text-2xl font-bold text-gray-800">0 km</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Puntuación Decisiones</p>
+                <p id="scoreDisplay" class="text-2xl font-bold text-green-600">0 pts</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Desafíos Completados</p>
+                <p id="challengesCompletedDisplay" class="text-2xl font-bold text-orange-600">0/10</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interfaz de Planificación y Acción -->
+    <div id="controls" class="bg-white p-6 rounded-xl shadow-lg mb-6 border-t-4 border-green-500">
+        <h2 class="text-xl font-semibold mb-4 text-green-700">Comenzar el Viaje (Mentalidad y Planificación)</h2>
+
+        <!-- Input para la Mentalidad Inicial -->
+        <div class="mb-4">
+            <label for="routeInput" class="block text-sm font-medium text-gray-700 mb-2">1. Define tu Puerto Destino (Tu Objetivo/Modelo de Negocio)</label>
+            <input type="text" id="routeInput" placeholder="Ej: Ser la panadería líder en IA para 2026." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <!-- Botón de Inicio y Barco -->
+        <button id="startButton" onclick="startGame()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md hover:shadow-lg">
+            Zarpar (Iniciar Simulación)
+        </button>
+        
+        <!-- Zona de Simulación Visual -->
+        <div class="sea-bg mt-6 rounded-lg">
+            <span class="text-3xl md:text-4xl">⚓</span>
+            <span id="boatIcon" class="boat-icon">🚢</span>
+            <span class="text-3xl md:text-4xl">🏝️</span>
+        </div>
+    </div>
+
+    <!-- Log de Eventos y Desafíos -->
+    <div class="flex-grow">
+        <h2 class="text-xl font-semibold mb-2 text-gray-700">Bitácora de Eventos (Desafíos y Decisiones)</h2>
+        <div id="log" class="log-container">
+            <p class="text-gray-500 italic">Esperando que el Capitán defina su ruta y zarpe...</p>
+        </div>
+    </div>
+
+    <!-- Modal para Desafíos (Diseño Thinking / 6 Sombreros) -->
+    <div id="challengeModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-yellow-500">
+            <!-- Contenido dinámico para desafíos o resultados -->
+            <h3 class="text-2xl font-bold mb-4 text-yellow-700">🚨 DESAFÍO EN EL OCÉANO 🚨</h3>
+            <p id="challengeText" class="mb-6 text-gray-700">Texto del desafío...</p>
+            
+            <div id="decisionButtons" class="space-y-3">
+                <!-- Los botones de decisión se insertarán aquí -->
+            </div>
+            
+            <p class="text-xs text-gray-500 mt-4">
+                *Esto simula una toma de decisión rápida, aplicando los principios de Design Thinking o los 6 Sombreros.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // --- VARIABLES DE ESTADO ---
+        let gameActive = false;
+        let distance = 0;
+        let score = 0; // Puntuación basada en decisiones
+        let logIndex = 0;
+        let challengesCompleted = 0; // Contador de desafíos
+        let challengeActive = false; // Bandera para un solo modal activo
+        let intervalId;
+        let nextChallengeDistance = 9; // Distancia para el próximo desafío (9km, 18km, 27km...)
+        
+        // Almacena las decisiones tomadas para marcarlas en el mapa
+        let decisionMarkers = []; 
+        // Almacena el desafío actual mientras el modal está abierto
+        let currentChallengeData = null; 
+        
+        // El icono del barco que se mueve
+        const boatIcon = document.getElementById('boatIcon');
+        const startButton = document.getElementById('startButton');
+        const routeInput = document.getElementById('routeInput');
+        
+        // DOM para estadísticas
+        const distanceDisplay = document.getElementById('distance');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const challengesCompletedDisplay = document.getElementById('challengesCompletedDisplay');
+        const logContainer = document.getElementById('log');
+
+        // Modal y Desafíos
+        const challengeModal = document.getElementById('challengeModal');
+        const challengeText = document.getElementById('challengeText');
+        const decisionButtonsContainer = document.getElementById('decisionButtons');
+        
+        // --- DATOS DEL JUEGO (10 Desafíos Únicos) ---
+        const CHALLENGES = [
+            {
+                icon: '🐙', // Pulpo de Datos / Competidor IA
+                text: "El **Barco Competidor 4.0** (que usa IA para segmentar) ha triplicado sus ventas y está robando tus clientes. ¿Inviertes en **Gemini Workspace** para analizar tus datos (IA) o recortas gastos de marketing (Mentalidad de escasez)?",
+                theme: "Inteligencia Artificial (IA) / Búsqueda de Clientes",
+                decisions: [
+                    { label: "Opción A: Invertir en IA/Gemini (Optimización)", effect: { score: 1 }, result: "¡Movida maestra! La IA identificó un nicho de clientes no explorado. Rentabilidad asegurada." },
+                    { label: "Opción B: Recortar Marketing (Miedo al Gasto)", effect: { score: -1.5 }, result: "El competidor sigue creciendo. Tu visibilidad se redujo a cero, aumentando la desventaja." }
+                ]
+            },
+            {
+                icon: '🌩️', // Tormenta / Escasez Financiera
+                text: "Los recursos financieros están críticos (quedan 2 meses de capital). ¿Buscas una inyección de capital rápida (Sacrificar acciones) o aplicas los **6 Sombreros para Pensar** en la optimización de procesos (Disciplina/Rentabilidad)?",
+                theme: "Escasez de Recursos Financieros / 6 Sombreros para Pensar",
+                decisions: [
+                    { label: "Opción A: Inyección de Capital (Solución a corto plazo)", effect: { score: -1.5 }, result: "Ganaste tiempo, pero perdiste control (acciones). Dependencia externa." },
+                    { label: "Opción B: Optimizar con 6 Sombreros (Disciplina)", effect: { score: 1 }, result: "Descubriste procesos ineficientes y los eliminaste. Lograste extender el capital sin ceder control." }
+                ]
+            },
+            {
+                icon: '🧊', // Iceberg / Producto Fallido (Falta de datos)
+                text: "Los **datos de prueba del producto** indican que los clientes no están satisfechos con una característica clave. ¿Ignoras los datos y sigues (Falta de compromiso) o usas **Design Thinking** para pivotar la característica y mejorar el producto?",
+                theme: "Mejora de Producto / Design Thinking / Compromiso",
+                decisions: [
+                    { label: "Opción A: Ignorar los datos (Falta de Disciplina)", effect: { score: -1.5 }, result: "El producto se vuelve irrelevante para el mercado. Las ventas caen." },
+                    { label: "Opción B: Pivotar con Design Thinking (Compromiso)", effect: { score: 1 }, result: "La iteración rápida mejoró la retención de clientes. Avance significativo." }
+                ]
+            },
+            {
+                icon: '⚙️', // Motor Averiado (Desafío Técnico)
+                text: "El motor principal del barco falló repentinamente. ¿Contratas un equipo de reparación externo inmediatamente (alto costo, solución rápida) o usas tutoriales en línea y tu equipo interno (ahorro, pero pérdida de tiempo valioso)?",
+                theme: "Desafío Técnico / Gestión de Crisis",
+                decisions: [
+                    { label: "Opción A: Contratar experto (Proactivo)", effect: { score: 1 }, result: "El motor fue reparado rápidamente. El costo fue alto, pero se minimizó la pérdida de tiempo en el mercado." },
+                    { label: "Opción B: Reparación interna (Demora y riesgo de error)", effect: { score: -1.5 }, result: "La reparación interna se demoró dos semanas más de lo esperado y generó más errores, perdiendo oportunidades." }
+                ]
+            },
+            {
+                icon: '🧱', // Resistencia al Cambio (Equipo)
+                text: "Parte de tu tripulación (empleados) se resiste a usar las nuevas herramientas de automatización. ¿Los capacitas intensivamente y les das tiempo para adaptarse (inversión en talento) o los reemplazas por personal nuevo y digitalizado (ruptura cultural)?",
+                theme: "Gestión del Cambio / Talento 4.0",
+                decisions: [
+                    { label: "Opción A: Capacitación intensiva (Inversión en talento)", effect: { score: 1 }, result: "La tripulación se sintió valorada y el conocimiento interno se mantuvo. La adopción fue exitosa a largo plazo." },
+                    { label: "Opción B: Reemplazo inmediato (Ruptura cultural)", effect: { score: -1.5 }, result: "El reemplazo causó baja moral y pérdida de conocimiento institucional. El barco es rápido, pero la tripulación inexperta." }
+                ]
+            },
+            {
+                icon: '👾', // Cyberataque (Seguridad 4.0)
+                text: "Sufres un intento de ciberataque a tus datos sensibles de clientes. ¿Inviertes en un sistema de seguridad de vanguardia (prevención proactiva) o ignoras la alarma pensando que 'no volverá a pasar' (riesgo latente)?",
+                theme: "Ciberseguridad / Protección de Datos",
+                decisions: [
+                    { label: "Opción A: Invertir en seguridad avanzada", effect: { score: 1 }, result: "Refuerzos de seguridad instalados. Estás protegido contra futuros ataques, manteniendo la confianza de los clientes." },
+                    { label: "Opción B: Ignorar la alarma", effect: { score: -1.5 }, result: "El barco fue vulnerable a un segundo ataque, perdiendo datos valiosos y enfrentando multas por incumplimiento." }
+                ]
+            },
+            {
+                icon: '🚨', // Saturación del Mercado (Océano Rojo)
+                text: "Descubres que el mercado al que apuntas está saturado de ofertas similares a la tuya. ¿Mantienes el rumbo con precios bajos (guerra de precios) o usas la mentalidad de **Océano Azul** para redefinir tu propuesta de valor?",
+                theme: "Estrategia de Mercado / Océano Azul",
+                decisions: [
+                    { label: "Opción A: Redefinir propuesta (Océano Azul)", effect: { score: 1 }, result: "Encontraste un espacio de mercado nuevo y sin competencia. Tu barco navega en aguas claras y tranquilas." },
+                    { label: "Opción B: Guerra de precios", effect: { score: -1.5 }, result: "Entraste en una guerra de precios que devalúa tu producto y quema tus márgenes de beneficio." }
+                ]
+            },
+            {
+                icon: '🚀', // Tendencia Tecnológica Disruptiva
+                text: "Una nueva tecnología (ej. realidad aumentada) amenaza con dejar obsoleto tu producto en 6 meses. ¿Dedicas el 50% de tu tiempo a I+D para integrarla (innovación) o esperas a ver si la tendencia 'pega' (pasividad)?",
+                theme: "Innovación y Adaptabilidad",
+                decisions: [
+                    { label: "Opción A: Invertir en I+D (Innovación)", effect: { score: 1 }, result: "Adoptaste la tecnología tempranamente, posicionándote como líder del mercado y asegurando el futuro del proyecto." },
+                    { label: "Opción B: Esperar a ver (Pasividad)", effect: { score: -1.5 }, result: "La tecnología se popularizó, dejando tu producto en desventaja y obligándote a un costoso y tardío proceso de adaptación." }
+                ]
+            },
+            {
+                icon: '🎭', // Conflicto de Liderazgo (6 Sombreros)
+                text: "Dos líderes de área tienen un conflicto que está paralizando la toma de decisiones clave. ¿Tomas la decisión por ellos (autoritarismo) o facilitas una sesión con los **6 Sombreros para Pensar** para resolver el conflicto de manera objetiva?",
+                theme: "Liderazgo y Resolución de Conflictos",
+                decisions: [
+                    { label: "Opción A: Facilitar 6 Sombreros (Objetividad)", effect: { score: 1 }, result: "El conflicto se resolvió, mejorando la comunicación y empoderando a los líderes en la toma de decisiones futura." },
+                    { label: "Opción B: Decidir unilateralmente (Autoritarismo)", effect: { score: -1.5 }, result: "Resolviste el problema inmediato, pero generaste resentimiento y socavaste la autonomía de tus líderes." }
+                ]
+            },
+            {
+                icon: '📣', // Crisis de Reputación (Viralidad Negativa)
+                text: "Un cliente influyente publica una reseña negativa que se vuelve viral. ¿Intentas silenciar la reseña con una demanda (agresividad) o aplicas **Design Thinking** para entender el problema, disculparte y ofrecer una solución pública y rápida?",
+                theme: "Gestión de la Reputación / Empatía",
+                decisions: [
+                    { label: "Opción A: Disculparse y aplicar DT (Empatía)", effect: { score: 1 }, result: "La respuesta honesta y proactiva convirtió al cliente en un defensor y mejoró la imagen de la marca." },
+                    { label: "Opción B: Intentar silenciar (Agresividad)", effect: { score: -1.5 }, result: "La demanda generó más controversia y dañó irreparablemente la percepción pública de tu proyecto." }
+                ]
+            }
+        ];
+        
+        // --- FUNCIONES PRINCIPALES ---
+
+        /** Inicia o detiene el juego */
+        function startGame() {
+            if (!gameActive) {
+                const destination = routeInput.value.trim();
+                if (destination.length < 5) {
+                    showCustomModal("Error al Zarpar", "Define tu destino primero, Capitán. (Mínimo 5 caracteres)");
+                    return;
+                }
+                
+                // RESTABLECER ESTILOS DEL BARCO AL INICIAR
+                boatIcon.style.transition = 'transform 0.5s ease-out';
+                boatIcon.style.opacity = '1';
+                
+                // Resetear el estado y marcadores
+                distance = 0;
+                score = 0;
+                logIndex = 0;
+                challengesCompleted = 0;
+                challengeActive = false;
+                decisionMarkers = []; // Reinicia los marcadores
+                logContainer.innerHTML = '';
+                nextChallengeDistance = 9; // El primer desafío es al km 9
+                
+                updateLog(`⚓ ¡Zarpando! Destino: **${destination}** (Tu Modelo de Negocio).`);
+                updateLog("El motor 4.0 está encendido. La misión ha comenzado.");
+                
+                gameActive = true;
+                startButton.textContent = "Hacer Escala (Detener)";
+                startButton.classList.remove('bg-blue-600');
+                startButton.classList.add('bg-red-600');
+                
+                // Iniciar el ciclo de avance continuo
+                intervalId = setInterval(advanceStep, 3000); // Avanza cada 3 segundos
+            } else {
+                // Detener el juego (Hacer Escala)
+                clearInterval(intervalId);
+                gameActive = false;
+                startButton.textContent = "Zarpar (Reiniciar Simulación)";
+                startButton.classList.remove('bg-red-600');
+                startButton.classList.add('bg-blue-600');
+                
+                updateLog(`🚩 ¡Misión Pausada! Distancia total: ${distance} km. Puntuación: ${score.toFixed(1)} pts.`, "bg-yellow-100 text-yellow-800 p-2 font-semibold");
+                
+                // Si el usuario pausa antes de terminar, no se ejecuta endGame, solo se detiene.
+            }
+            updateStatus();
+        }
+
+        /** Procesa el avance en el tiempo y dispara eventos */
+        function advanceStep() {
+            // DETENER AVANCE si hay un desafío activo 
+            if (challengeActive) {
+                 // Mantener la posición visual, pero sin avanzar
+                const visualDistance = Math.min(distance, 100); 
+                const progress = (visualDistance / 100) * 80 + 10; 
+                boatIcon.style.transform = `translateX(${progress}%)`;
+                return; 
+            }
+            
+            logIndex++;
+            
+            // Simular avance pasivo 
+            const baseAdvance = 2 + Math.floor(Math.random() * 3); // 2-4 km base
+            distance += baseAdvance;
+            
+            // Si la distancia supera 100km, la fijamos en 100 para el log visual.
+            if (distance > 100) {
+                distance = 100;
+            }
+
+            updateStatus();
+            
+            // Log de avance diferenciado
+            if (challengesCompleted < CHALLENGES.length) {
+                updateLog(`✅ Paso ${logIndex}: Avanzamos ${baseAdvance} km en aguas tranquilas.`);
+            } else if (distance < 100) {
+                 updateLog(`🚀 Avance post-evaluación: Avanzamos ${baseAdvance} km hacia el Puerto Final (100 km).`);
+            }
+            
+
+            // Chequear si se ha alcanzado la distancia del próximo desafío (cada 9 km)
+            if (challengesCompleted < CHALLENGES.length && !challengeActive && distance >= nextChallengeDistance) {
+                showChallenge();
+            }
+
+            // Condición de fin de juego: 10 desafíos completados Y llegar a 100km. (ACTUALIZADO)
+            if (challengesCompleted >= CHALLENGES.length && distance >= 100) {
+                endGame();
+                return; 
+            }
+            
+            // Mover el barco visualmente (simulación de progreso)
+            const visualDistance = distance; 
+            const progress = (visualDistance / 100) * 80 + 10; // De 10% a 90%
+            boatIcon.style.transform = `translateX(${progress}%)`;
+        }
+
+        /** Muestra el modal del desafío */
+        function showChallenge() {
+            // Usa el índice de desafío completado para obtener el siguiente desafío de la lista
+            if (challengesCompleted >= CHALLENGES.length) return;
+
+            challengeActive = true; // Activa la bandera para detener el avance
+            currentChallengeData = CHALLENGES[challengesCompleted]; 
+            const challenge = currentChallengeData;
+
+            // Asegura que el modal de desafío tenga el borde amarillo
+            const modalContent = challengeModal.querySelector('.bg-white');
+            modalContent.classList.remove('border-blue-500');
+            modalContent.classList.add('border-yellow-500');
+
+
+            challengeText.innerHTML = `**Desafío ${challengesCompleted + 1} de ${CHALLENGES.length}**<br>
+                                        **Tema:** ${challenge.theme}<br><br>${challenge.text}`;
+            decisionButtonsContainer.innerHTML = '';
+
+            challenge.decisions.forEach((decision) => {
+                const button = document.createElement('button');
+                
+                // Limpiar el texto: eliminar contenido entre paréntesis 
+                const cleanLabel = decision.label.replace(/\s*\([^)]*\)\s*/g, '');
+                
+                button.textContent = cleanLabel; 
+                button.className = 'w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200';
+                // Pasamos el objeto decision y el originalChallenge al manejador
+                button.onclick = () => handleDecision(decision, currentChallengeData); 
+                decisionButtonsContainer.appendChild(button);
+            });
+
+            challengeModal.classList.remove('hidden');
+        }
+
+        /** Procesa la decisión del usuario en el desafío */
+        function handleDecision(decision, originalChallenge) {
+            // Actualiza la puntuación
+            score += decision.effect.score;
+            
+            // Almacenar la decisión para marcarla en el mapa
+            if (currentChallengeData) {
+                decisionMarkers.push({
+                    distance: distance, // La distancia DÓNDE se tomó la decisión
+                    icon: currentChallengeData.icon,
+                    theme: currentChallengeData.theme,
+                    result: decision.label.replace(/\s*\([^)]*\)\s*/g, ''), // Almacenar label limpio
+                    score: decision.effect.score
+                });
+                currentChallengeData = null; // Limpiar después de usar
+            }
+
+            challengesCompleted++; // Contabiliza el desafío completado
+            challengeActive = false; // Desactiva la bandera para reanudar el avance
+            
+            // --- ACTUALIZACIÓN DE DISTANCIA DEL DESAFÍO ---
+            if (challengesCompleted < CHALLENGES.length) {
+                // El siguiente desafío será al múltiplo de 9 que sigue
+                nextChallengeDistance = (challengesCompleted + 1) * 9; 
+                updateLog(`🗺️ Próximo desafío programado para el kilómetro ${nextChallengeDistance}.`);
+            } else {
+                nextChallengeDistance = 9999; // Asegura que no se dispare otro desafío 
+            }
+
+
+            // --- LOG DETALLADO Y COMPLETO ---
+            let detailedLog = `<div class="bg-gray-100 p-3 rounded my-2 border-l-4 border-yellow-500">`;
+            detailedLog += `<p class="font-bold text-lg text-yellow-700">🚢 Desafío ${challengesCompleted} resuelto en ${distance} km</p>`;
+            detailedLog += `<p class="text-sm italic mb-3">Tema: ${originalChallenge.theme}</p>`;
+            detailedLog += `<p class="mb-3">${originalChallenge.text}</p>`;
+            detailedLog += `<p class="font-semibold mb-2">Opciones y Tu Decisión:</p>`;
+
+            originalChallenge.decisions.forEach(opt => {
+                const cleanLabel = opt.label.replace(/\s*\([^)]*\)\s*/g, '');
+                const scoreText = opt.effect.score > 0 ? `+${opt.effect.score.toFixed(1)}` : opt.effect.score.toFixed(1);
+                
+                let optionLine = `<span class="text-gray-600">${cleanLabel}</span>`;
+
+                if (opt.label === decision.label) {
+                    // Resaltar la seleccionada en negrita y añadir puntaje (NUEVO REQUERIMIENTO)
+                    optionLine = `➡️ <span class="font-extrabold text-blue-700">${cleanLabel}</span> | Puntaje: ${scoreText} pts`;
+                } else {
+                    optionLine = `<span class="text-gray-600">${cleanLabel}</span> | Puntaje: ${scoreText} pts`;
+                }
+
+                detailedLog += `<p class="text-xs ml-4 mb-1">${optionLine}</p>`;
+            });
+
+            detailedLog += `<p class="mt-3 font-semibold">Consecuencia: ${decision.result}</p>`;
+            detailedLog += `<p class="mt-3 font-bold text-right text-md text-blue-700 border-t pt-2 border-gray-300">Puntaje Total Acumulado: ${score.toFixed(1)} pts</p>`;
+            detailedLog += `</div>`;
+            
+            updateLog(detailedLog, 'p-0 mb-1'); 
+            
+            updateStatus();
+            challengeModal.classList.add('hidden');
+            
+            // Chequear si se alcanzaron los 10 desafíos Y la distancia final (la distancia se chequea en advanceStep)
+            // No hacemos nada si challengesCompleted == 10, solo se reanuda el avance.
+        }
+
+        /** Clasifica la puntuación final según los rangos definidos. */
+        function getScoreClassification(finalScore) {
+            if (finalScore >= 10) {
+                return {
+                    category: "Emprendedor alineado a la 4.0",
+                    message: "¡Felicitaciones! Tu mentalidad de liderazgo es excelente y proactiva."
+                };
+            } else if (finalScore >= 7) { // Implica entre 7.0 y 9.5
+                return {
+                    category: "Emprendedor 4.0 con conocimientos básicos",
+                    message: "¡Vas por buen camino! Tienes una base sólida, sigue desarrollando tu visión."
+                };
+            } else if (finalScore >= 4) { // Implica entre 4.0 y 6.5
+                return {
+                    category: "El curso de Emprendedor 4.0 es ideal para ti",
+                    message: "¡Bienvenido! Tienes la intención, pero necesitas afianzar tus herramientas de decisión (Design Thinking, 6 Sombreros)."
+                };
+            } else if (finalScore >= 1) { // Implica entre 1.0 y 3.5
+                return {
+                    category: "Emprendedor candidato a Consultoría con Hitos de Inflexión",
+                    message: "Reserva una Cita. Tuviste algunas decisiones proactivas, pero los retrocesos fueron muy costosos."
+                };
+            } else { // Menos de 1.0 (incluyendo negativos)
+                return {
+                    category: "Necesito el Sombrero de Harry Potter",
+                    message: "Tu mentalidad actual es demasiado pasiva o reactiva. ¡Hay mucho potencial por liberar!"
+                };
+            }
+        }
+
+        /** Genera el contenido HTML de la tabla de resultados final. */
+        function generateResultsTableHTML(finalScore, classification) {
+            let tableContent = `
+                <div class="space-y-4">
+                    <div class="p-4 rounded-lg shadow-inner bg-gray-50 border border-gray-200">
+                        <p class="text-sm font-semibold text-gray-500">Puntuación Final</p>
+                        <p class="text-4xl font-extrabold ${finalScore > 0 ? 'text-green-600' : 'text-red-600'}">${finalScore.toFixed(1)} pts</p>
+                    </div>
+                    
+                    <div class="p-4 rounded-lg shadow-md border-2 border-blue-500 bg-blue-50">
+                        <p class="text-lg font-bold text-blue-800 mb-1">Tu Clasificación:</p>
+                        <p class="text-xl font-bold">${classification.category}</p>
+                        <p class="text-sm mt-1 text-gray-700">${classification.message}</p>
+                    </div>
+
+                    <h4 class="text-xl font-semibold mt-6 text-gray-700 border-b pb-2">Resumen Detallado de Decisiones:</h4>
+                    
+                    <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden">
+                        <thead class="bg-blue-500 text-white">
+                            <tr>
+                                <th class="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider">#</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider">Km</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider">Tema</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider">Decisión</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider">Puntos</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200 text-xs">
+            `;
+            
+            // Llenar la tabla con decisionMarkers
+            decisionMarkers.forEach((marker, index) => {
+                const scoreColor = marker.score > 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+                tableContent += `
+                    <tr>
+                        <td class="px-2 py-2 font-bold">${index + 1}</td>
+                        <td class="px-2 py-2 whitespace-nowrap">${marker.distance} km</td>
+                        <td class="px-2 py-2">${marker.theme}</td>
+                        <td class="px-2 py-2">${marker.result}</td>
+                        <td class="px-2 py-2 ${scoreColor} whitespace-nowrap">${marker.score > 0 ? '+' : ''}${marker.score.toFixed(1)}</td>
+                    </tr>
+                `;
+            });
+            
+            tableContent += `
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            `;
+            return tableContent;
+        }
+
+
+        /** Actualiza los indicadores de estado y dibuja los marcadores en el mapa */
+        function updateStatus() {
+            distanceDisplay.textContent = `${distance} km`;
+            scoreDisplay.textContent = `${score.toFixed(1)} pts`; // Mostrar con un decimal
+            challengesCompletedDisplay.textContent = `${challengesCompleted}/${CHALLENGES.length}`;
+
+            // Cambiar color de score si es bajo (simulando riesgo conceptual)
+            if (score <= 0) {
+                scoreDisplay.classList.add('text-red-600');
+                scoreDisplay.classList.remove('text-green-600');
+            } else {
+                scoreDisplay.classList.remove('text-red-600');
+                scoreDisplay.classList.add('text-green-600');
+            }
+            
+            renderMarkers(); // LLAMADO PARA ACTUALIZAR LOS MARCADORES VISUALES
+        }
+        
+        /** Dibuja los marcadores de decisiones en la barra de progreso */
+        function renderMarkers() {
+            const seaBg = document.querySelector('.sea-bg');
+            
+            // Elimina marcadores existentes
+            seaBg.querySelectorAll('.marker').forEach(m => m.remove());
+
+            decisionMarkers.forEach(marker => {
+                // Cálculo de la posición: convierte distancia (max 100) a porcentaje (10% a 90% del contenedor)
+                const visualDistance = Math.min(marker.distance, 100); 
+                const progressPercent = (visualDistance / 100) * 80 + 10; 
+
+                // Crea el elemento marcador
+                const markerDiv = document.createElement('div');
+                markerDiv.className = 'marker';
+                markerDiv.style.left = `${progressPercent}%`;
+                
+                // Añadir color de puntuación al ícono
+                const scoreColor = marker.score > 0 ? 'text-green-400' : 'text-red-400';
+                
+                // Tooltip/Etiqueta (Muestra la información de la decisión)
+                const label = document.createElement('span');
+                label.className = 'marker-label shadow-xl';
+                // Mostrar puntaje en el tooltip para evaluación posterior
+                label.innerHTML = `
+                    <span class="${scoreColor} font-bold">${marker.score > 0 ? '+' : ''}${marker.score.toFixed(1)} pts</span><br>
+                    **${marker.icon} ${marker.theme}**<br>
+                    Decisión: ${marker.result}
+                `;
+
+                // Ícono de obstáculo
+                const iconSpan = document.createElement('span');
+                iconSpan.textContent = marker.icon;
+                
+                markerDiv.appendChild(iconSpan);
+                markerDiv.appendChild(label);
+                
+                // Inserta antes del ícono del barco para que el barco se vea encima
+                seaBg.insertBefore(markerDiv, boatIcon);
+            });
+        }
+
+        /** Agrega un mensaje a la bitácora */
+        function updateLog(message, className = 'text-gray-700') {
+            const p = document.createElement('p');
+            // Mantiene el formato de Bitácora para el timestamp
+            p.innerHTML = `<span class="text-xs text-gray-400 mr-2">${new Date().toLocaleTimeString()}</span>${message}`;
+            p.className = `text-sm mb-1 ${className}`;
+            logContainer.prepend(p); // Añadir al inicio para ver lo más reciente
+        }
+
+        /** Muestra un modal personalizado, usado para alertas o el resultado final. */
+        function showCustomModal(title, contentHTML, isFinalResult = false) {
+            const modal = document.getElementById('challengeModal');
+            const contentDiv = modal.querySelector('.bg-white');
+            
+            // Limpiar el contenido previo y rellenar
+            contentDiv.innerHTML = `
+                <h3 class="text-2xl font-bold mb-4 ${isFinalResult ? 'text-blue-800' : 'text-yellow-700'}">${isFinalResult ? '📊 RESULTADOS FINALES DE LA SIMULACIÓN' : title}</h3>
+                
+                <div class="mb-6 text-gray-700 space-y-3">
+                    ${contentHTML}
+                </div>
+
+                <button onclick="document.getElementById('challengeModal').classList.add('hidden')" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg mt-4">
+                    Cerrar
+                </button>
+            `;
+            // Ajustar el color del borde superior del modal para el resultado final
+            if (isFinalResult) {
+                contentDiv.classList.remove('border-yellow-500');
+                contentDiv.classList.add('border-blue-500');
+            } else {
+                 contentDiv.classList.remove('border-blue-500');
+                contentDiv.classList.add('border-yellow-500');
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        /** Finaliza el juego y muestra el resultado (Añade navegación hasta 100km) */
+        function endGame() {
+            clearInterval(intervalId);
+            gameActive = false;
+            
+            // Si el juego finaliza por alcanzar los 10 desafíos y 100km
+            if (challengesCompleted >= CHALLENGES.length && distance >= 100) {
+                const finalScore = score;
+                const classification = getScoreClassification(finalScore);
+                
+                // 1. Log en la bitácora
+                updateLog(`🏁 **FIN DE LA SIMULACIÓN.** Evaluación de mentalidad completada. Puntuación Final: ${finalScore.toFixed(1)} pts. Clasificación: ${classification.category}`, "bg-blue-100 text-blue-800 p-3 font-bold");
+
+                // 2. Generar el contenido HTML de la tabla de resultados
+                const tableContent = generateResultsTableHTML(finalScore, classification);
+
+                // 3. Mostrar el modal de resultados
+                showCustomModal(`Evaluación completada. Distancia total: ${distance} km.`, tableContent, true);
+            } else {
+                // Este caso ocurre cuando el usuario presiona "Hacer Escala" (Detener)
+                const pauseMessage = "Te detuviste antes de finalizar el viaje. Vuelve a Zarpar para continuar.";
+                showCustomModal("Misión Pausada (Hacer Escala)", pauseMessage);
+            }
+            
+            // Estilos de reinicio
+            boatIcon.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
+            boatIcon.style.opacity = '1';
+
+            startButton.textContent = "Reiniciar Simulación";
+            startButton.classList.remove('bg-red-600');
+            startButton.classList.add('bg-blue-600');
+            
+            renderMarkers(); 
+        }
+
+        // --- Inicialización ---
+        window.onload = function() {
+            updateStatus(); // Inicializar el display
+            boatIcon.style.transform = `translateX(10%)`;
+        };
+    </script>
+</body>
+</html>
