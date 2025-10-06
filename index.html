@@ -70,6 +70,12 @@
         .log-container::-webkit-scrollbar { width: 8px; }
         .log-container::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 4px; }
         .log-container::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+
+        /* Estilo para el modal de resultados: permite desplazamiento interno */
+        .results-modal-content {
+            max-height: 90vh; /* Máximo 90% del alto de la ventana */
+            overflow-y: auto; /* Permite desplazamiento si el contenido es muy largo */
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex flex-col">
@@ -131,7 +137,8 @@
 
     <!-- Modal para Desafíos (Diseño Thinking / 6 Sombreros) -->
     <div id="challengeModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-yellow-500">
+        <!-- AUMENTO DEL TAMAÑO MÁXIMO DEL MODAL (max-w-md a max-w-3xl) y se añade clase para scroll interno -->
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm md:max-w-3xl border-t-8 border-yellow-500 results-modal-content">
             <!-- Contenido dinámico para desafíos o resultados -->
             <h3 class="text-2xl font-bold mb-4 text-yellow-700">🚨 DESAFÍO EN EL OCÉANO 🚨</h3>
             <p id="challengeText" class="mb-6 text-gray-700">Texto del desafío...</p>
@@ -519,9 +526,10 @@
 
                     <h4 class="text-xl font-semibold mt-6 text-gray-700 border-b pb-2">Resumen Detallado de Decisiones:</h4>
                     
-                    <div class="overflow-x-auto">
+                    <!-- ENVOLTURA PARA SCROLL HORIZONTAL Y VERTICAL DE LA TABLA -->
+                    <div class="overflow-x-auto max-h-96"> 
                     <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden">
-                        <thead class="bg-blue-500 text-white">
+                        <thead class="bg-blue-500 text-white sticky top-0"> <!-- Cabecera fija para el scroll -->
                             <tr>
                                 <th class="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider">#</th>
                                 <th class="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider">Km</th>
